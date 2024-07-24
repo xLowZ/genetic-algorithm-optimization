@@ -328,9 +328,10 @@ std::vector<Chromosome> createNewGeneration(const std::vector<Chromosome>& prev_
 std::vector<Chromosome> parallelCreateNewGeneration(const std::vector<Chromosome>& prev_gen, const Parameters& p, int numThreads)
 {
     int numElites{ std::max(1, static_cast<int>(p.elite_fraction * p.pop_size)) };
-    int numNew{ p.pop_size - numElites };
 
-    (numElites & 1) ? numElites &= ~1 : numElites; 
+    (numElites & 1) ? numElites &= ~1 : numElites;
+    
+    int numNew{ p.pop_size - numElites };
 
     std::vector<Chromosome> newGeneration;
     newGeneration.reserve(p.pop_size);
