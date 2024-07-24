@@ -1,0 +1,13 @@
+nIterations=1000
+pop_size=500
+initial_mutation_rate=0.2
+final_mutation_rate=0.1
+initial_mutation_strength=0.2
+final_mutation_strength=0.001
+elite_fraction=0.02
+target_function=rastrigin
+dimensions=2
+method=tournament
+points=one
+print_precision=10
+num_tests=4

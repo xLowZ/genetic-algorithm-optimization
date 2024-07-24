@@ -1,0 +1,33 @@
+Cmake Manually:
+
+    mkdir build
+    cd build
+    
+    With VisualStudio:
+
+        cmake ..
+        cmake --build .
+
+    With MinGW:
+
+        cmake -G "MinGW Makefiles" ..
+        cmake --build .
+
+Additional flags:
+
+   Warnings:
+       "-Wall"
+       "-Weffc++"
+       "-Wextra"
+       "-Wconversion"
+       "-Wsign-conversion"
+       "-pedantic-errors"
+       "-Werror"
+
+Standalone Makefile:
+
+   You can change default configurations such as flags, similar to the ones above.
+   To use other settings: make MODE=(Debug or Release) or/and CPP_VERSION=(14, 17 etc)
+   
+   Example:
+       make MODE=Release CPP_VERSION=17
