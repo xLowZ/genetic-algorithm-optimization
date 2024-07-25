@@ -7,7 +7,7 @@
 
 ## Sobre
 
-- Para resoluções unidimendionais, o algoritmo opera com `(1+1)-ES`.
+- Para problemas unidimendionais, o algoritmo opera com `(1+1)-ES`.
 
 - O algoritmo conta com as funções de:
 
@@ -89,6 +89,6 @@ Opcionalmente, pode-se executar o programa com o argumento `--help` para descri�
 ```
 ## Observações:
 
-- Está disponibilizado minha pasta `.vscode` com tasks configuradas de debug e release para o compilador gcc para Windows. Se estiver utilizando o mesmo OS, basta verificar e ajustar o caminho para o compilador e para o debugger nos arquivos `.json`.
+- Está disponibilizada minha pasta `.vscode` com tasks configuradas de debug e release para o compilador gcc para Windows. Se estiver utilizando o mesmo OS, basta verificar e ajustar o caminho para o compilador e para o debugger nos arquivos `.json`.
 - Está disponibilizado também um arquivo Make separado pronto para uso.
 - Há também um arquivo de texto adicional com algumas flags opcionais + uso do Makefile separadamente.
