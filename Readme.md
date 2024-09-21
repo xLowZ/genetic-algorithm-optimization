@@ -7,8 +7,6 @@
 
 ## Sobre
 
-- Para problemas unidimendionais, o algoritmo opera com `(1+1)-ES`.
-
 - O algoritmo conta com as funções de:
 
     - [Rastrigin](https://en.wikipedia.org/wiki/Rastrigin_function)
