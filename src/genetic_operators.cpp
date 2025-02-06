@@ -5,8 +5,8 @@
 
 // -------------------------------------------------------------------------------------------------------------------------------------
 
-std::vector<int> selectRandomIndices(int populationSize, int numCandidates);
-std::vector<double> getFintessArray(const std::vector<Chromosome>& pop);
+// std::vector<int> selectRandomIndices(int populationSize, int numCandidates);
+std::vector<double> getFitnessArray(const std::vector<Chromosome>& pop);
 
 // -------------------------------------------------------------------------------------------------------------------------------------
 
@@ -70,11 +70,13 @@ void evaluatePopulation(std::vector<Chromosome>& population, TargetFunction targ
 
 // -------------------------------------------------------------------------------------------------------------------------------------
 
-Chromosome selection(const std::vector<Chromosome>& population, int populationSize, SelectionMethod method, int numCandidates)
+const Chromosome& selection(const std::vector<Chromosome>& population, int populationSize, SelectionMethod method, int numCandidates)
 {
     if(method == SelectionMethod::tournament)
     {
-        std::vector<int> selectedIndices{ selectRandomIndices(populationSize, numCandidates) };
+        std::vector<int> selectedIndices(numCandidates);
+        for (int i = 0; i < numCandidates; ++i) 
+            selectedIndices[i] = Random::uniform(0, populationSize);
 
         // Encontra o índice do vencedor com base no menor fitness
         int winnerIndex { selectedIndices[0] }; 
@@ -90,63 +92,53 @@ Chromosome selection(const std::vector<Chromosome>& population, int populationSi
 
     else if(method == SelectionMethod::fps)
     {
-        std::vector<double> fitnessArray{ getFintessArray(population) };
+        std::vector<double> fitnessArray{ getFitnessArray(population) };
+
+        double maxFitness{ *std::max_element(fitnessArray.begin(), fitnessArray.end()) };
+        std::transform(fitnessArray.begin(), fitnessArray.end(), fitnessArray.begin(),
+                [maxFitness](double f) { return maxFitness - f + 1e-6; });
 
         double totalFitness{ std::accumulate(fitnessArray.begin(), fitnessArray.end(), 0.0) };
-        double inverseFitness{ 1 / totalFitness };
 
         std::vector<double> probabilities(populationSize);
 
-        for(const auto& fitness : fitnessArray) 
-            probabilities.push_back(fitness * inverseFitness);
+        std::transform(fitnessArray.begin(), fitnessArray.end(), probabilities.begin(),
+                [totalFitness](double f) { return f / totalFitness; });
         
         std::vector<double> roulette(populationSize);
-
         std::partial_sum(probabilities.begin(), probabilities.end(), std::back_inserter(roulette));
 
         double magicNum{ Random::rand() };
-
-        for(int i{0}; i < populationSize; ++i)
-        {
-            if(magicNum < roulette[i])
-                return population[i];
-        }
+        auto it{ std::lower_bound(roulette.begin(), roulette.end(), magicNum) };
+        return population[std::distance(roulette.begin(), it)];
     }
 
-    else if (method == SelectionMethod::ranking) 
+    else if(method == SelectionMethod::ranking) 
     {
-
         constexpr double min{ 0.8 };
         constexpr double max{ 1.1 };
 
-        static std::vector<int> indices(populationSize);
-        static bool initialized{ false };
-        if (!initialized) 
-        {
-            std::iota(indices.begin(), indices.end(), 0);
-            initialized = true;
-        }   
-
         // Calcular as probabilidades de seleção com base nos indices
         std::vector<double> probabilities(populationSize);
-        for (int i {0}, j {populationSize}; i < populationSize; ++i, --j)
-            probabilities[i] = min + (max - min) * (static_cast<double>(j) / (populationSize - 1));
+        for (int i {0}; i < populationSize; ++i)
+            probabilities[i] = max - (max - min) * (static_cast<double>(i) / (populationSize - 1));
     
         // Normalizar as probabilidades para garantir que a soma seja 1
-        double totalProbability = std::accumulate(probabilities.begin(), probabilities.end(), 0.0);
-        for (double& prob : probabilities) 
+        double totalProbability{ std::accumulate(probabilities.begin(), probabilities.end(), 0.0) };
+        for(double& prob : probabilities) 
             prob /= totalProbability;
 
         // Criar uma distribuição acumulada dessas probabilidades
-        std::vector<double> cumulativeProbabilities(populationSize);
-        std::partial_sum(probabilities.begin(), probabilities.end(), cumulativeProbabilities.begin());
+        std::vector<double> cumulativeProb(populationSize);
+        std::partial_sum(probabilities.begin(), probabilities.end(), cumulativeProb.begin());
 
         double magicNum{ Random::rand() };
-        for (int i {0}; i < populationSize; ++i)
-        {
-            if (magicNum < cumulativeProbabilities[i])
-                return population[ indices[i] ];
-        }
+        auto it{ std::lower_bound(cumulativeProb.begin(), cumulativeProb.end(), magicNum) };
+
+        if(it == cumulativeProb.end()) // Caso de arredondamento
+            return population.back();
+
+        return population[std::distance(cumulativeProb.begin(), it)];
     }
 
     return * std::min_element(population.begin(), population.end(),
@@ -157,8 +149,8 @@ Chromosome selection(const std::vector<Chromosome>& population, int populationSi
 
 std::pair<Chromosome, Chromosome> crossover(const Chromosome& parent1, const Chromosome& parent2, Points nPoints)
 {
-    std::vector<double> firstParentGenes { parent1.get_genes_array() };
-    std::vector<double> secondParentGenes{ parent2.get_genes_array() };
+    const std::vector<double>& firstParentGenes { parent1.get_genes_array() };
+    const std::vector<double>& secondParentGenes{ parent2.get_genes_array() };
 
     int size{ static_cast<int>(parent1.size()) };
 
@@ -284,8 +276,8 @@ std::vector<Chromosome> createNewGeneration(const std::vector<Chromosome>& prev_
     {
         while(std::ssize(newGeneration) < p.pop_size)
         {
-            Chromosome firstParent { selection(prev_gen, p.pop_size, p.method) };
-            Chromosome secondParent{ selection(prev_gen, p.pop_size, p.method) };
+            const Chromosome& firstParent { selection(prev_gen, p.pop_size, p.method) };
+            const Chromosome& secondParent{ selection(prev_gen, p.pop_size, p.method) };
 
             auto [firstChild, secondChild]{ crossover(firstParent, secondParent, p.points) };
 
@@ -302,7 +294,7 @@ std::vector<Chromosome> createNewGeneration(const std::vector<Chromosome>& prev_
     {
         while(std::ssize(newGeneration) < p.pop_size)
         {
-            Chromosome parent{ selection(prev_gen, p.pop_size, p.method) };
+            const Chromosome& parent{ selection(prev_gen, p.pop_size, p.method) };
             Chromosome child{ parent };
 
             child.mutate(p.mutation_rate, p.mutation_strength);
@@ -346,8 +338,8 @@ std::vector<Chromosome> parallelCreateNewGeneration(const std::vector<Chromosome
         #pragma omp parallel for schedule(static) num_threads(numThreads)
         for(int i = 0; i < numNew / 2; ++i)
         {
-            Chromosome firstParent  { selection(prev_gen, p.pop_size, p.method) };
-            Chromosome secondParent { selection(prev_gen, p.pop_size, p.method) };
+            const Chromosome& firstParent  { selection(prev_gen, p.pop_size, p.method) };
+            const Chromosome& secondParent { selection(prev_gen, p.pop_size, p.method) };
 
             auto [firstChild, secondChild]{ crossover(firstParent, secondParent, p.points) };
 
@@ -363,7 +355,7 @@ std::vector<Chromosome> parallelCreateNewGeneration(const std::vector<Chromosome
         #pragma omp parallel for schedule(static) num_threads(numThreads)
         for(int i = 0; i < numNew; ++i)
         {
-            Chromosome parent{ selection(prev_gen, p.pop_size, p.method) };
+            const Chromosome& parent{ selection(prev_gen, p.pop_size, p.method) };
             Chromosome child{ parent };
 
             child.mutate(p.mutation_rate, p.mutation_strength);
@@ -384,22 +376,22 @@ std::vector<Chromosome> parallelCreateNewGeneration(const std::vector<Chromosome
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------
 
-std::vector<int> selectRandomIndices(int populationSize, int numCandidates) 
-{
-    std::vector<int> indices(populationSize);
+// std::vector<int> selectRandomIndices(int populationSize, int numCandidates) 
+// {
+//     std::vector<int> indices(populationSize);
 
-    std::iota(indices.begin(), indices.end(), 0);
+//     std::iota(indices.begin(), indices.end(), 0);
 
-    std::shuffle(indices.begin(), indices.end(), Random::mt);
+//     std::shuffle(indices.begin(), indices.end(), Random::mt);
     
-    return std::vector<int>(indices.begin(), indices.begin() + numCandidates);
-}
+//     return std::vector<int>(indices.begin(), indices.begin() + numCandidates);
+// }
 
-std::vector<double> getFintessArray(const std::vector<Chromosome>& pop)
+std::vector<double> getFitnessArray(const std::vector<Chromosome>& pop)
 {
     std::vector<double> fitnessArray(pop.size());
 
-    for (std::size_t i {0}; i < pop.size(); ++i)
+    for(std::size_t i {0}; i < pop.size(); ++i)
         fitnessArray[i] = pop[i].get_fitness();
 
     return fitnessArray;
